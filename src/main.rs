@@ -42,7 +42,9 @@ fn main() {
             Arg::with_name("language name")
               .long("language")
               .short("l")
-              .help("The language to use when examining the supplied files for differences")
+              .help("The language to use when examining the supplied files for \
+                     differences.{n}If this option isn't provided, DEng will perform a naïve \
+                     character-by-character diff.")
               .takes_value(true),
             Arg::with_name("old file")
               .help("The file to consider “old” for the purposes of finding \
