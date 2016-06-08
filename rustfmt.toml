@@ -1,3 +1,7 @@
+max_width = 140
+ideal_width = 100
+fn_call_width = 80
+struct_lit_width = 40
 tab_spaces = 2
 fn_brace_style = "PreferSameLine"
 item_brace_style = "PreferSameLine"

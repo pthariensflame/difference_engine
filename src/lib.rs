@@ -13,4 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub fn example() {}
+pub trait Language {
+  fn name(&self) -> String;
+
+  fn description(&self) -> String;
+}
+
+#[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Default,Debug)]
+pub struct DefaultLanguage;
+
+impl Language for DefaultLanguage {
+  fn name(&self) -> String { "default".to_string() }
+
+  fn description(&self) -> String { "The default “language;” implements a naïve character-by-character diff".to_string() }
+}
+
+impl<L: Language + ?Sized> Language for Box<L> {
+  fn name(&self) -> String { self.as_ref().name() }
+
+  fn description(&self) -> String { self.as_ref().description() }
+}
