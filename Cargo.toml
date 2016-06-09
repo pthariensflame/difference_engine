@@ -21,6 +21,7 @@ description = "DEng—an extensible language-aware diff"
 repository = "https://github.com/pthariensflame/difference_engine"
 readme = "README.md"
 license = "Apache-2.0"
+keywords = ["text", "file", "language", "tool"]
 
 [dependencies]
 clap = "~2.5.2"
