@@ -71,9 +71,11 @@ fn main() {
   }
 
   let language_name = arg_matches.value_of("language name").unwrap_or("default");
+  let language = registered_languages.get(language_name).expect("could not find language");
   let (old_file, new_file) = resolve_files(arg_matches.value_of_os("old file").unwrap(),
                                            arg_matches.value_of_os("new file").unwrap());
-  let language = registered_languages.get(language_name).expect("could not find language");
+
+  let diff_result = language.diff(old_file, new_file);
 }
 
 fn resolve_files(old_file_arg: &OsStr, new_file_arg: &OsStr) -> (String, String) {

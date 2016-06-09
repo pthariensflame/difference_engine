@@ -26,6 +26,7 @@ license = "Apache-2.0"
 clap = "~2.5.2"
 colored = "~1.2.0"
 diff = "~0.1.9"
+itertools = "~0.4.15"
 
 [lib]
 name = "difference_engine"
