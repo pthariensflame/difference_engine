@@ -14,7 +14,6 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-use std::iter;
 use std::io;
 use std::io::prelude::*;
 use std::fs;
@@ -30,6 +29,7 @@ use colored::*;
 
 extern crate difference_engine;
 use difference_engine::*;
+use difference_engine::Provenance::*;
 
 fn main() {
   let registered_languages_raw = vec![Box::new(DefaultLanguage) as Box<Language>];
@@ -75,7 +75,15 @@ fn main() {
   let (old_file, new_file) = resolve_files(arg_matches.value_of_os("old file").unwrap(),
                                            arg_matches.value_of_os("new file").unwrap());
 
-  let diff_result = language.diff(old_file, new_file);
+  for (x, sx) in language.diff(old_file, new_file) {
+    print!("{}",
+           match sx {
+             Old => x.red(),
+             Shared => x.as_str().into(),
+             New => x.green(),
+           });
+    io::stdout().flush().expect("error when attempting to flush standard ouput");
+  }
 }
 
 fn resolve_files(old_file_arg: &OsStr, new_file_arg: &OsStr) -> (String, String) {
