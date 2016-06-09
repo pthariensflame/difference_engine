@@ -31,13 +31,44 @@ pub trait Language {
   fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)>;
 }
 
+impl<L: Language + ?Sized> Language for Box<L> {
+  fn name(&self) -> String { self.as_ref().name() }
+
+  fn description(&self) -> String { self.as_ref().description() }
+
+  fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> { self.as_ref().diff(old, new) }
+}
+
 #[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Default,Debug)]
-pub struct DefaultLanguage;
+pub struct Linewise;
 
-impl Language for DefaultLanguage {
-  fn name(&self) -> String { "default".to_string() }
+impl Language for Linewise {
+  fn name(&self) -> String { "simple-linewise".to_string() }
 
-  fn description(&self) -> String { "The default “language;” implements a naïve character-by-character diff".to_string() }
+  fn description(&self) -> String { "A “language” that implements a naïve line-by-line diff".to_string() }
+
+  fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> {
+    use diff::Result::*;
+    use Provenance::*;
+    diff::lines(&old, &new)
+      .into_iter()
+      .map(|cr| match cr {
+        Left(x) => (x.to_string() + "\n", Old),
+        Right(x) => (x.to_string() + "\n", New),
+        Both(x, _) => (x.to_string() + "\n", Shared),
+      })
+      .coalesce(|(x, sx), (y, sy)| if sx == sy { Ok((x + &y, sx)) } else { Err(((x, sx), (y, sy))) })
+      .collect()
+  }
+}
+
+#[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Default,Debug)]
+pub struct Charwise;
+
+impl Language for Charwise {
+  fn name(&self) -> String { "simple-charwise".to_string() }
+
+  fn description(&self) -> String { "A “language” that implements a naïve character-by-character diff".to_string() }
 
   fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> {
     use diff::Result::*;
@@ -52,12 +83,4 @@ impl Language for DefaultLanguage {
       .coalesce(|(x, sx), (y, sy)| if sx == sy { Ok((x + &y, sx)) } else { Err(((x, sx), (y, sy))) })
       .collect()
   }
-}
-
-impl<L: Language + ?Sized> Language for Box<L> {
-  fn name(&self) -> String { self.as_ref().name() }
-
-  fn description(&self) -> String { self.as_ref().description() }
-
-  fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> { self.as_ref().diff(old, new) }
 }

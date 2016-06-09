@@ -32,7 +32,7 @@ use difference_engine::*;
 use difference_engine::Provenance::*;
 
 fn main() {
-  let registered_languages_raw = vec![Box::new(DefaultLanguage) as Box<Language>];
+  let registered_languages_raw: Vec<Box<Language>> = vec![Box::new(Linewise), Box::new(Charwise)];
   let registered_languages: HashMap<String, Box<Language>> =
     registered_languages_raw.into_iter().map(|language| (language.name(), language)).collect();
 
@@ -51,7 +51,7 @@ fn main() {
                 .long("language")
                 .short("l")
                 .help("The language to use when examining the supplied files for differences.{n}If this option isn't provided, DEng \
-                       will perform a naïve character-by-character diff.")
+                       will perform a naïve line-by-line diff.")
                 .takes_value(true),
               Arg::with_name("old file")
                 .help("The file to consider “old” for the purposes of finding differences.{n}DEng will interpret a ‘-’ here as \
@@ -70,7 +70,7 @@ fn main() {
     return;
   }
 
-  let language_name = arg_matches.value_of("language name").unwrap_or("default");
+  let language_name = arg_matches.value_of("language name").unwrap_or("simple-linewise");
   let language = registered_languages.get(language_name).expect("could not find language");
   let (old_file, new_file) = resolve_files(arg_matches.value_of_os("old file").unwrap(),
                                            arg_matches.value_of_os("new file").unwrap());
