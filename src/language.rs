@@ -13,11 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate diff;
-use diff::Result::*;
-
-extern crate itertools;
-use itertools::*;
+use super::itertools::*;
+use super::diff;
 
 #[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Debug)]
 pub enum Provenance {
@@ -43,6 +40,7 @@ impl Language for DefaultLanguage {
   fn description(&self) -> String { "The default “language;” implements a naïve character-by-character diff".to_string() }
 
   fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> {
+    use diff::Result::*;
     use Provenance::*;
     diff::chars(&old, &new)
       .into_iter()
