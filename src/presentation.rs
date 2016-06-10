@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::any::Any;
 use std::io;
 use std::io::prelude::*;
 use std::path::Path;
@@ -78,43 +79,47 @@ impl Presentation for BasicStyled {
 #[derive(Debug)]
 pub struct RawPluginPresentation {
   lib: Library,
+  metadata: Box<Any>,
 }
 
 impl RawPluginPresentation {
   pub fn load(path: &Path) -> libloading::Result<RawPluginPresentation> {
     Library::new(path).map(|lib| {
-      if let Ok(raw_fn) = unsafe { lib.get::<fn()>(b"deng_plugin_initialize") } {
-        raw_fn();
+      let data: Box<Any>;
+      if let Ok(raw_fn) = unsafe { lib.get::<fn() -> Box<Any>>(b"deng_plugin_initialize") } {
+        data = raw_fn();
+      } else {
+        data = Box::new(());
       }
-      RawPluginPresentation { lib: lib }
+      RawPluginPresentation { lib: lib, metadata: data }
     })
   }
 }
 
 impl Drop for RawPluginPresentation {
   fn drop(&mut self) {
-    if let Ok(raw_fn) = unsafe { self.lib.get::<fn()>(b"deng_plugin_deinitialize") } {
-      raw_fn();
+    if let Ok(raw_fn) = unsafe { self.lib.get::<fn(&Any)>(b"deng_plugin_deinitialize") } {
+      raw_fn(self.metadata.as_ref());
     }
   }
 }
 
 impl ExtensionPoint for RawPluginPresentation {
   fn name(&self) -> String {
-    let raw_fn: Symbol<fn() -> String> = unsafe { self.lib.get(b"deng_plugin_name") }.expect("error in loading raw plugin");
-    return raw_fn();
+    let raw_fn: Symbol<fn(&Any) -> String> = unsafe { self.lib.get(b"deng_plugin_name") }.expect("error in loading raw plugin");
+    return raw_fn(self.metadata.as_ref());
   }
 
   fn description(&self) -> String {
-    let raw_fn: Symbol<fn() -> String> = unsafe { self.lib.get(b"deng_plugin_description") }.expect("error in loading raw plugin");
-    return raw_fn();
+    let raw_fn: Symbol<fn(&Any) -> String> = unsafe { self.lib.get(b"deng_plugin_description") }.expect("error in loading raw plugin");
+    return raw_fn(self.metadata.as_ref());
   }
 }
 
 impl Presentation for RawPluginPresentation {
   fn present(&self, diff: Vec<(String, Provenance)>) {
-    let raw_fn: Symbol<fn(Vec<(String, Provenance)>)> = unsafe { self.lib.get(b"deng_plugin_present") }
+    let raw_fn: Symbol<fn(&Any, &[(String, Provenance)])> = unsafe { self.lib.get(b"deng_plugin_present") }
       .expect("error in loading raw plugin");
-    raw_fn(diff);
+    raw_fn(self.metadata.as_ref(), &diff);
   }
 }
