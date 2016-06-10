@@ -42,7 +42,7 @@ impl Presentation for BasicColored {
       print!("{}",
              match sx {
                Old => x.red(),
-               Shared => x.as_str().into(),
+               Shared => x.normal(),
                New => x.green(),
              });
       io::stdout().flush().expect("error when attempting to flush standard ouput");
@@ -56,7 +56,7 @@ pub struct BasicStyled;
 impl ExtensionPoint for BasicStyled {
   fn name(&self) -> String { "basic-styled".to_string() }
 
-  fn description(&self) -> String { "Makes new-file-only parts bold and old-file-only parts italic".to_string() }
+  fn description(&self) -> String { "Makes new-file-only parts bold and old-file-only parts underlined".to_string() }
 }
 
 impl Presentation for BasicStyled {
@@ -64,8 +64,8 @@ impl Presentation for BasicStyled {
     for (x, sx) in diff {
       print!("{}",
              match sx {
-               Old => x.italic(),
-               Shared => x.as_str().into(),
+               Old => x.underline(),
+               Shared => x.normal(),
                New => x.bold(),
              });
       io::stdout().flush().expect("error when attempting to flush standard ouput");
