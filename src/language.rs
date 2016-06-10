@@ -15,41 +15,29 @@
 
 use super::itertools::*;
 use super::diff;
+use diff::Result::*;
+use super::{ExtensionPoint, Provenance};
+use Provenance::*;
 
-#[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Debug)]
-pub enum Provenance {
-  Old,
-  Shared,
-  New,
-}
-
-pub trait Language {
-  fn name(&self) -> String;
-
-  fn description(&self) -> String;
-
+pub trait Language: ExtensionPoint {
   fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)>;
 }
 
 impl<L: Language + ?Sized> Language for Box<L> {
-  fn name(&self) -> String { self.as_ref().name() }
-
-  fn description(&self) -> String { self.as_ref().description() }
-
   fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> { self.as_ref().diff(old, new) }
 }
 
 #[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Default,Debug)]
-pub struct Linewise;
+pub struct SimpleLinewise;
 
-impl Language for Linewise {
+impl ExtensionPoint for SimpleLinewise {
   fn name(&self) -> String { "simple-linewise".to_string() }
 
   fn description(&self) -> String { "A “language” that implements a naïve line-by-line diff".to_string() }
+}
 
+impl Language for SimpleLinewise {
   fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> {
-    use diff::Result::*;
-    use Provenance::*;
     diff::lines(&old, &new)
       .into_iter()
       .map(|cr| match cr {
@@ -63,13 +51,15 @@ impl Language for Linewise {
 }
 
 #[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Default,Debug)]
-pub struct Charwise;
+pub struct SimpleCharwise;
 
-impl Language for Charwise {
+impl ExtensionPoint for SimpleCharwise {
   fn name(&self) -> String { "simple-charwise".to_string() }
 
   fn description(&self) -> String { "A “language” that implements a naïve character-by-character diff".to_string() }
+}
 
+impl Language for SimpleCharwise {
   fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> {
     use diff::Result::*;
     use Provenance::*;

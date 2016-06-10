@@ -29,12 +29,14 @@ use colored::*;
 
 extern crate difference_engine;
 use difference_engine::*;
-use difference_engine::Provenance::*;
 
 fn main() {
-  let registered_languages_raw: Vec<Box<Language>> = vec![Box::new(Linewise), Box::new(Charwise)];
+  let registered_languages_raw: Vec<Box<Language>> = vec![Box::new(SimpleLinewise), Box::new(SimpleCharwise)];
   let registered_languages: HashMap<String, Box<Language>> =
     registered_languages_raw.into_iter().map(|language| (language.name(), language)).collect();
+  let registered_presentations_raw: Vec<Box<Presentation>> = vec![Box::new(BasicColored), Box::new(BasicStyled)];
+  let registered_presentations: HashMap<String, Box<Presentation>> =
+    registered_presentations_raw.into_iter().map(|presentation| (presentation.name(), presentation)).collect();
 
   let arg_matches =
     clap::App::new("DEng, the Difference Engine")
@@ -46,12 +48,23 @@ fn main() {
                 .long("show-languages")
                 .short("L")
                 .help("Lists all of the languages currently supported by DEng")
-                .conflicts_with_all(&["language name", "old file", "new file"]),
+                .conflicts_with_all(&["show presentations", "language name", "presentation name", "old file", "new file"]),
+              Arg::with_name("show presentations")
+                .long("show-presentations")
+                .short("P")
+                .help("Lists all of the presentations currently supported by DEng")
+                .conflicts_with_all(&["show languages", "language name", "presentation name", "old file", "new file"]),
               Arg::with_name("language name")
                 .long("language")
                 .short("l")
                 .help("The language to use when examining the supplied files for differences.{n}If this option isn't provided, DEng \
                        will perform a naïve line-by-line diff.")
+                .takes_value(true),
+              Arg::with_name("presentation name")
+                .long("presentation")
+                .short("p")
+                .help("The presentation to use when outputting the calculated diff.{n}If this option isn't provided, DEng will color \
+                       new-file-only parts red and old-file-only parts green.")
                 .takes_value(true),
               Arg::with_name("old file")
                 .help("The file to consider “old” for the purposes of finding differences.{n}DEng will interpret a ‘-’ here as \
@@ -65,25 +78,25 @@ fn main() {
 
   if arg_matches.is_present("show languages") {
     for language in registered_languages.values() {
-      println!("{}: {}", language.name().bold(), language.description());
+      println!("{}:\t{}", language.name().bold(), language.description());
+    }
+    return;
+  }
+
+  if arg_matches.is_present("show presentations") {
+    for presentation in registered_presentations.values() {
+      println!("{}:\t{}", presentation.name().bold(), presentation.description());
     }
     return;
   }
 
   let language_name = arg_matches.value_of("language name").unwrap_or("simple-linewise");
   let language = registered_languages.get(language_name).expect("could not find language");
+  let presentation_name = arg_matches.value_of("presentation name").unwrap_or("basic-colored");
+  let presentation = registered_presentations.get(presentation_name).expect("could not find presentation");
   let (old_file, new_file) = resolve_files(arg_matches.value_of_os("old file").unwrap(),
                                            arg_matches.value_of_os("new file").unwrap());
-
-  for (x, sx) in language.diff(old_file, new_file) {
-    print!("{}",
-           match sx {
-             Old => x.red(),
-             Shared => x.as_str().into(),
-             New => x.green(),
-           });
-    io::stdout().flush().expect("error when attempting to flush standard ouput");
-  }
+  presentation.present(language.diff(old_file, new_file));
 }
 
 fn resolve_files(old_file_arg: &OsStr, new_file_arg: &OsStr) -> (String, String) {

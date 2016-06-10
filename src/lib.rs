@@ -14,8 +14,30 @@
 // limitations under the License.
 
 extern crate diff;
-
 extern crate itertools;
+extern crate colored;
+
+#[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Debug)]
+pub enum Provenance {
+  Old,
+  Shared,
+  New,
+}
+
+pub trait ExtensionPoint {
+  fn name(&self) -> String;
+
+  fn description(&self) -> String;
+}
+
+impl<L: ExtensionPoint + ?Sized> ExtensionPoint for Box<L> {
+  fn name(&self) -> String { self.as_ref().name() }
+
+  fn description(&self) -> String { self.as_ref().description() }
+}
 
 mod language;
 pub use language::*;
+
+mod presentation;
+pub use presentation::*;
