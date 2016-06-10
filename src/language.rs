@@ -83,7 +83,22 @@ pub struct RawPluginLanguage {
 }
 
 impl RawPluginLanguage {
-  pub fn load(path: &Path) -> libloading::Result<RawPluginLanguage> { Library::new(path).map(|lib| RawPluginLanguage { lib: lib }) }
+  pub fn load(path: &Path) -> libloading::Result<RawPluginLanguage> {
+    Library::new(path).map(|lib| {
+      if let Ok(raw_fn) = unsafe { lib.get::<fn()>(b"deng_plugin_initialize") } {
+        raw_fn();
+      }
+      RawPluginLanguage { lib: lib }
+    })
+  }
+}
+
+impl Drop for RawPluginLanguage {
+  fn drop(&mut self) {
+    if let Ok(raw_fn) = unsafe { self.lib.get::<fn()>(b"deng_plugin_deinitialize") } {
+      raw_fn();
+    }
+  }
 }
 
 impl ExtensionPoint for RawPluginLanguage {

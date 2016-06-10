@@ -81,7 +81,22 @@ pub struct RawPluginPresentation {
 }
 
 impl RawPluginPresentation {
-  pub fn load(path: &Path) -> libloading::Result<RawPluginPresentation> { Library::new(path).map(|lib| RawPluginPresentation { lib: lib }) }
+  pub fn load(path: &Path) -> libloading::Result<RawPluginPresentation> {
+    Library::new(path).map(|lib| {
+      if let Ok(raw_fn) = unsafe { lib.get::<fn()>(b"deng_plugin_initialize") } {
+        raw_fn();
+      }
+      RawPluginPresentation { lib: lib }
+    })
+  }
+}
+
+impl Drop for RawPluginPresentation {
+  fn drop(&mut self) {
+    if let Ok(raw_fn) = unsafe { self.lib.get::<fn()>(b"deng_plugin_deinitialize") } {
+      raw_fn();
+    }
+  }
 }
 
 impl ExtensionPoint for RawPluginPresentation {

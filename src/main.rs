@@ -19,6 +19,11 @@ use std::io::prelude::*;
 use std::fs;
 use std::path::PathBuf;
 use std::ffi::OsStr;
+use std::env;
+use std::env::consts::{DLL_EXTENSION, DLL_PREFIX};
+
+extern crate itertools;
+use itertools::*;
 
 #[macro_use]
 extern crate clap;
@@ -31,13 +36,6 @@ extern crate difference_engine;
 use difference_engine::*;
 
 fn main() {
-  let registered_languages_raw: Vec<Box<Language>> = vec![Box::new(SimpleLinewise), Box::new(SimpleCharwise)];
-  let registered_languages: HashMap<String, Box<Language>> =
-    registered_languages_raw.into_iter().map(|language| (language.name(), language)).collect();
-  let registered_presentations_raw: Vec<Box<Presentation>> = vec![Box::new(BasicColored), Box::new(BasicStyled)];
-  let registered_presentations: HashMap<String, Box<Presentation>> =
-    registered_presentations_raw.into_iter().map(|presentation| (presentation.name(), presentation)).collect();
-
   let arg_matches =
     clap::App::new("DEng, the Difference Engine")
       .version(crate_version!())
@@ -76,6 +74,48 @@ fn main() {
                 .required(true)])
       .get_matches();
 
+  let mut registered_languages_vec: Vec<Box<Language>> = vec![Box::new(SimpleLinewise), Box::new(SimpleCharwise)];
+  let raw_language_plugin_path = env::var_os("DENG_RAW_LANGUAGE_PLUGIN_PATH");
+  for plugin in env::current_dir()
+    .into_iter()
+    .map(|d| d.join(".deng").join("languages").join("raw"))
+    .chain(raw_language_plugin_path.as_ref().into_iter().flat_map(env::split_paths))
+    .chain(env::home_dir().into_iter().map(|d| d.join(".deng").join("languages").join("raw")))
+    .flat_map(|d| d.read_dir().into_iter())
+    .flatten()
+    .flatten()
+    .map(|e| e.path())
+    .filter(|p| {
+      p.file_stem().and_then(|s| s.to_str()).map(|s| s.starts_with(DLL_PREFIX)) == Some(true) &&
+      p.extension().map(|s| s == DLL_EXTENSION) == Some(true)
+    })
+    .flat_map(|p| RawPluginLanguage::load(&p).into_iter()) {
+    registered_languages_vec.push(Box::new(plugin));
+  }
+  let registered_languages: HashMap<String, Box<Language>> =
+    registered_languages_vec.into_iter().map(|language| (language.name(), language)).unique_by(|nl| nl.0.clone()).collect();
+
+  let mut registered_presentations_vec: Vec<Box<Presentation>> = vec![Box::new(BasicColored), Box::new(BasicStyled)];
+  let raw_presentation_plugin_path = env::var_os("DENG_RAW_PRESENTATION_PLUGIN_PATH");
+  for plugin in env::current_dir()
+    .into_iter()
+    .map(|d| d.join(".deng").join("presentations").join("raw"))
+    .chain(raw_presentation_plugin_path.as_ref().into_iter().flat_map(env::split_paths))
+    .chain(env::home_dir().into_iter().map(|d| d.join(".deng").join("presentations").join("raw")))
+    .flat_map(|d| d.read_dir().into_iter())
+    .flatten()
+    .flatten()
+    .map(|e| e.path())
+    .filter(|p| {
+      p.file_stem().and_then(|s| s.to_str()).map(|s| s.starts_with(DLL_PREFIX)) == Some(true) &&
+      p.extension().map(|s| s == DLL_EXTENSION) == Some(true)
+    })
+    .flat_map(|p| RawPluginPresentation::load(&p).into_iter()) {
+    registered_presentations_vec.push(Box::new(plugin));
+  }
+  let registered_presentations: HashMap<String, Box<Presentation>> =
+    registered_presentations_vec.into_iter().map(|presentation| (presentation.name(), presentation)).unique_by(|np| np.0.clone()).collect();
+
   if arg_matches.is_present("show languages") {
     for language in registered_languages.values() {
       println!("{}:\t{}", language.name().bold(), language.description());
@@ -92,10 +132,13 @@ fn main() {
 
   let language_name = arg_matches.value_of("language name").unwrap_or("simple-linewise");
   let language = registered_languages.get(language_name).expect("could not find language");
+
   let presentation_name = arg_matches.value_of("presentation name").unwrap_or("basic-colored");
   let presentation = registered_presentations.get(presentation_name).expect("could not find presentation");
+
   let (old_file, new_file) = resolve_files(arg_matches.value_of_os("old file").unwrap(),
                                            arg_matches.value_of_os("new file").unwrap());
+
   presentation.present(language.diff(old_file, new_file));
 }
 
