@@ -28,7 +28,7 @@ clap = "~2.5.2"
 colored = "~1.2.0"
 diff = "~0.1.9"
 itertools = "~0.4.15"
-rhai = "~0.3.0"
+libloading = "~0.2.2"
 
 [lib]
 name = "difference_engine"

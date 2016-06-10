@@ -16,6 +16,7 @@
 extern crate diff;
 extern crate itertools;
 extern crate colored;
+extern crate libloading;
 
 #[derive(Eq,Ord,PartialEq,PartialOrd,Hash,Clone,Copy,Debug)]
 pub enum Provenance {

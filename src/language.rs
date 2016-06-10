@@ -13,9 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::path::Path;
 use super::itertools::*;
 use super::diff;
 use diff::Result::*;
+use super::libloading::{self, Library, Symbol};
 use super::{ExtensionPoint, Provenance};
 use Provenance::*;
 
@@ -72,5 +74,34 @@ impl Language for SimpleCharwise {
       })
       .coalesce(|(x, sx), (y, sy)| if sx == sy { Ok((x + &y, sx)) } else { Err(((x, sx), (y, sy))) })
       .collect()
+  }
+}
+
+#[derive(Debug)]
+pub struct RawPluginLanguage {
+  lib: Library,
+}
+
+impl RawPluginLanguage {
+  pub fn load(path: &Path) -> libloading::Result<RawPluginLanguage> { Library::new(path).map(|lib| RawPluginLanguage { lib: lib }) }
+}
+
+impl ExtensionPoint for RawPluginLanguage {
+  fn name(&self) -> String {
+    let raw_fn: Symbol<fn() -> String> = unsafe { self.lib.get(b"deng_plugin_name") }.expect("error in loading raw plugin");
+    return raw_fn();
+  }
+
+  fn description(&self) -> String {
+    let raw_fn: Symbol<fn() -> String> = unsafe { self.lib.get(b"deng_plugin_description") }.expect("error in loading raw plugin");
+    return raw_fn();
+  }
+}
+
+impl Language for RawPluginLanguage {
+  fn diff(&self, old: String, new: String) -> Vec<(String, Provenance)> {
+    let raw_fn: Symbol<fn(String, String) -> Vec<(String, Provenance)>> = unsafe { self.lib.get(b"deng_plugin_diff") }
+      .expect("error in loading raw plugin");
+    return raw_fn(old, new);
   }
 }

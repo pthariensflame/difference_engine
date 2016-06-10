@@ -15,7 +15,9 @@
 
 use std::io;
 use std::io::prelude::*;
+use std::path::Path;
 use super::colored::*;
+use super::libloading::{self, Library, Symbol};
 use super::{ExtensionPoint, Provenance};
 use Provenance::*;
 
@@ -70,5 +72,34 @@ impl Presentation for BasicStyled {
              });
       io::stdout().flush().expect("error when attempting to flush standard ouput");
     }
+  }
+}
+
+#[derive(Debug)]
+pub struct RawPluginPresentation {
+  lib: Library,
+}
+
+impl RawPluginPresentation {
+  pub fn load(path: &Path) -> libloading::Result<RawPluginPresentation> { Library::new(path).map(|lib| RawPluginPresentation { lib: lib }) }
+}
+
+impl ExtensionPoint for RawPluginPresentation {
+  fn name(&self) -> String {
+    let raw_fn: Symbol<fn() -> String> = unsafe { self.lib.get(b"deng_plugin_name") }.expect("error in loading raw plugin");
+    return raw_fn();
+  }
+
+  fn description(&self) -> String {
+    let raw_fn: Symbol<fn() -> String> = unsafe { self.lib.get(b"deng_plugin_description") }.expect("error in loading raw plugin");
+    return raw_fn();
+  }
+}
+
+impl Presentation for RawPluginPresentation {
+  fn present(&self, diff: Vec<(String, Provenance)>) {
+    let raw_fn: Symbol<fn(Vec<(String, Provenance)>)> = unsafe { self.lib.get(b"deng_plugin_present") }
+      .expect("error in loading raw plugin");
+    raw_fn(diff);
   }
 }
