@@ -23,6 +23,29 @@ pub enum Provenance {
   Shared,
   New,
 }
+use Provenance::*;
+
+impl<'a> PartialEq<Provenance> for &'a Provenance {
+  fn eq(&self, other: &Provenance) -> bool { (**self as Provenance) == (*other as Provenance) }
+}
+
+impl<'a> PartialEq<&'a Provenance> for Provenance {
+  fn eq(&self, other: &&'a Provenance) -> bool { (*self as Provenance) == (**other as Provenance) }
+}
+
+impl Provenance {
+  pub fn is_old(&self) -> bool { self != New }
+
+  pub fn is_old_only(&self) -> bool { self == Old }
+
+  pub fn is_new(&self) -> bool { self != Old }
+
+  pub fn is_new_only(&self) -> bool { self == New }
+
+  pub fn is_shared(&self) -> bool { self == Shared }
+
+  pub fn is_unshared(&self) -> bool { self != Shared }
+}
 
 pub trait ExtensionPoint {
   fn name(&self) -> String;
