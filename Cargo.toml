@@ -15,7 +15,7 @@
 
 [package]
 name = "difference_engine"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Alexander Ronald Altman <alexanderaltman@me.com>"]
 description = "DEng—an extensible language-aware diff"
 repository = "https://github.com/pthariensflame/difference_engine"
