@@ -76,14 +76,13 @@ fn main() {
 
   let mut registered_languages_vec: Vec<Box<Language>> = vec![Box::new(SimpleLinewise), Box::new(SimpleCharwise)];
   let raw_language_plugin_path = env::var_os("DENG_RAW_LANGUAGE_PLUGIN_PATH");
-  for plugin in env::current_dir()
-    .into_iter()
-    .map(|d| d.join(".deng").join("languages").join("raw"))
-    .chain(raw_language_plugin_path.as_ref().into_iter().flat_map(env::split_paths))
-    .chain(env::home_dir().into_iter().map(|d| d.join(".deng").join("languages").join("raw")))
-    .flat_map(|d| d.read_dir().into_iter())
-    .flatten()
-    .flatten()
+  for plugin in Itertools::flatten(Itertools::flatten(env::current_dir()
+      .into_iter()
+      .map(|d| d.join(".deng").join("languages").join("raw"))
+      .chain(raw_language_plugin_path.as_ref().into_iter().flat_map(env::split_paths))
+      .chain(env::home_dir().into_iter().map(|d| d.join(".deng").join("languages").join("raw")))
+      .flat_map(|d| d.read_dir().into_iter())
+    ))
     .map(|e| e.path())
     .filter(|p| {
       p.file_stem().and_then(|s| s.to_str()).map(|s| s.starts_with(DLL_PREFIX)) == Some(true) &&
